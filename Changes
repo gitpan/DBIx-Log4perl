@@ -1,0 +1,36 @@
+Revision history for Perl extension DBIx::Log4perl.
+
+0.03  Sat May 20 2006
+
+  If a statement is executed with $sth->execute and it changes rows
+  then log the affected rows.
+
+  Added more tests and support for setting DB login details.
+
+0.02  Mon Apr 24 2006
+
+  Internal error handler changes:
+    The message passed to the internal error handler was never written to
+      the log file.
+    The $dbi Statement attribute was not being logged to the log file
+
+  Add new dbix_l4p_logdie method
+
+  README changes
+
+  Don't output "execute: undef" is execute is called with no args,
+  just output "execute:"
+
+  Add $DBI::lasth->{Type} and $DBI::lasth->{Statement} output to
+  error_handler
+
+  When do called, save SQL in Statement. This is because if an app
+  calls do for an insert/update/delete and the operation succeeds (in
+  DBI terms) BUT the app knows it has logically failed (e.g. inserted
+  0 rows when it expected 1) the app may call dbix_l4p_logdie and we
+  want the SQL to be visible.
+
+0.01  Mon Apr  3 16:10:52 2006
+	- original version; created by h2xs 1.23 with options
+		-A -X --compat-version=5.8.4 --use-new-tests -v 0.01 -n DBIx::Log4perl
+
