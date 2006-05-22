@@ -1,4 +1,4 @@
-# $Id: Log4perl.pm 184 2006-05-20 17:39:23Z martin $
+# $Id: Log4perl.pm 185 2006-05-22 09:43:29Z martin $
 require 5.008;
 
 use strict;
@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 

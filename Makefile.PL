@@ -15,15 +15,24 @@ Getopt::Long::GetOptions(
     "table=s",
     ) || die Usage();
 
+
+my ($dsn, $user, $password, $table) = ('', '', 'UNDEF', '');
+
+$dsn = $ENV{DBI_DSN} if (exists($ENV{DBI_DSN}));
+$user = $ENV{DBI_USER} if (exists($ENV{DBI_USER}));
+$password = $NV{DBI_PASS} if (exists($ENV{DBI_PASS}));
+$table = $ENV{DBI_TABLE} if (exists($ENV{DBI_TABLE}));
+
+$dsn = $opt->{dsn} if (exists($opt->{dsn}));
+$user = $opt->{user} if (exists($opt->{user}));
+$password = $opt->{password} if (exists($opt->{password}));
+$table = $opt->{table} if (exists($opt->{table}));
+
 open OUT, ">dbixl4p.config";
-print OUT "$opt->{dsn}\n" if (exists($opt->{dsn}));
-print OUT "$opt->{user}\n" if (exists($opt->{user}));
-if (exists($opt->{password})) {
-    print OUT "$opt->{password}\n";
-} else {
-    print OUT "UNDEF\n";
-}
-print OUT "$opt->{table}\n" if (exists($opt->{table}));
+print OUT "$dsn\n";
+print OUT "$user\n";
+print OUT "$password\n";
+print OUT "$table\n";
 close OUT;
 
 warn "\nPlease NOTE\nYou need to set and export the DBI_* environment variables or supply suitable values on the command line (see Perl Makefile.PL help) to run a complete test\n\n";
@@ -34,7 +43,8 @@ WriteMakefile(
     NAME              => 'DBIx::Log4perl',
     VERSION_FROM      => 'lib/DBIx/Log4perl.pm', # finds $VERSION
     PREREQ_PM         => {Log::Log4perl => 1.04,
-		          DBI => 1.50}, # e.g., Module::Name => 1.1
+		          DBI => 1.50,
+		          Test::More => 0.62},
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/DBIx/Log4perl.pm', # retrieve abstract from module
        AUTHOR         => 'Martin J. Evans <mjevans@cpan.org>') : ()),

@@ -4,9 +4,12 @@ DBIx-Log4perl version 0.03
 DBIx-Log4perl is an extension for DBI to selectively log SQL, parameters,
 result-sets, transactions etc to a Log::Log4perl handle.
 
-You will need to DBI and Log::Log4perl first.
+You will need the DBI and Log::Log4perl modules first.
 
 Please see the NOTES section in the pod for incompatibilities.
+
+Please make sure you have an up to date Test::More before running the
+tests. You will need at least 0.62.
 
 INSTALLATION
 
@@ -38,6 +41,7 @@ This module requires these other modules and libraries:
 
   DBI 1.50
   Log::Log4perl 1.04
+  Test::More 0.62
 
 COPYRIGHT AND LICENCE
 

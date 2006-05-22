@@ -1,5 +1,15 @@
 Revision history for Perl extension DBIx::Log4perl.
 
+0.04  Sun Man 21 2006
+
+  Additional tests mentioned in 0.03 omitted from MANIFEST
+
+  Add requirement on Test::more 0.62 because we are using
+  Test::Mores' BAIL_OUT.
+
+  Updated README to include instructions on defining your database
+  connection.
+
 0.03  Sat May 20 2006
 
   If a statement is executed with $sth->execute and it changes rows
