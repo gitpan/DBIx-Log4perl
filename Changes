@@ -1,6 +1,34 @@
 Revision history for Perl extension DBIx::Log4perl.
 
-0.04  Sun Man 21 2006
+0.05  Fri Jun 16 2006
+
+  Fixed a few typos in the pod.
+
+  Fixed bug in DBIx::Log4perl::prepare which was causing a non-Null
+  statement handle to be returned when the driver's prepare method
+  failed. When this handle was then used to execute a statement
+  DBI would spot it was not a proper handle and complain with:
+
+    dbih_getcom handle HASH(0x8c995d8) is not a DBI handle (has no magic)
+    at /usr/lib/perl5/site_perl/5.8.8/DBIx/Log4perl/db.pm line 61
+
+  and you might have seen something like the following on stderr for
+  your Perl application:
+
+    SV = RV(0x89a8e70) at 0x8e19950
+    REFCNT = 1
+    FLAGS = (TEMP,ROK)
+    RV = 0x8c995d8
+
+  Fixed issue in the error handler which does not handle ParamValues
+  hash keys having undefined values.
+
+  Fixed issue in _dbix_l4p_debug which was stopping calls to
+  $sth->execute without any arguments being logged.
+
+  Fixed typo in test skipped message in simple.t
+
+0.04  Sun May 21 2006
 
   Additional tests mentioned in 0.03 omitted from MANIFEST
 

@@ -1,4 +1,4 @@
-# $Id: st.pm 182 2006-05-20 10:05:11Z martin $
+# $Id: st.pm 208 2006-06-21 15:10:33Z martin $
 use strict;
 use warnings;
 use DBI;

@@ -1,4 +1,4 @@
-DBIx-Log4perl version 0.03
+DBIx-Log4perl version 0.05
 ==========================
 
 DBIx-Log4perl is an extension for DBI to selectively log SQL, parameters,

@@ -1,4 +1,4 @@
-# $Id: simple.t 188 2006-05-22 17:04:46Z martin $
+# $Id: simple.t 208 2006-06-21 15:10:33Z martin $
 $^W = 1;
 
 push @INC, 't';
@@ -30,7 +30,7 @@ $conf = $conf2 if (-r $conf2);
 config();
 
 if (!defined($dsn) || ($dsn eq "")) {
-    diag("Connection orientated test not run because not database connect information supplied");
+    diag("Connection orientated test not run because no database connect information supplied");
     exit 0;
 }
 

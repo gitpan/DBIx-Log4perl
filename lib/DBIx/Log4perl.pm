@@ -1,4 +1,4 @@
-# $Id: Log4perl.pm 185 2006-05-22 09:43:29Z martin $
+# $Id: Log4perl.pm 209 2006-06-22 09:45:41Z martin $
 require 5.008;
 
 use strict;
@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -50,6 +50,8 @@ sub _dbix_l4p_debug {
 	} else {
 	    $h->{logger}->debug("$thing: " . DBI::neat($args[0]));
 	}
+    } else {
+	$h->{logger}->debug($thing);
     }
 }
 sub _dbix_l4p_warning {
@@ -187,8 +189,9 @@ sub _error_handler {
     if ($type eq 'st') {
 	my $str = "";
 	if ($handle->{ParamValues}) {
-	    map {$str .= $handle->{ParamValues}->{$_} . ","}
-	      sort keys %{$handle->{ParamValues}};
+	    foreach (sort keys %{$handle->{ParamValues}}) {
+		$str .= DBI::neat($handle->{ParamValues}->{$_}) . ",";
+	    }
 	}
 	$out .= "  ParamValues: $str\n";
 	$out .= "  " .
@@ -284,7 +287,7 @@ parameters, result-sets, transactions etc to a Log::Log4perl handle.
   use DBIx::Log4perl;
 
   Log::Log4perl->init("/etc/mylog.conf");
-  my $dbh - DBIX::Log4perl->connect('DBI:odbc:mydsn', $user, $pass);
+  my $dbh - DBIx::Log4perl->connect('DBI:odbc:mydsn', $user, $pass);
   $dbh->DBI_METHOD(args);
 
   or
@@ -321,7 +324,7 @@ Returns the value for a DBIx::Log4perl attribute (see L</Attributes>).
 
  $h->dbix_l4p_setattr('DBIx_l4p_logmask', 1);
 
-Seta the value of the specified DBIx::Log4perl attribute
+Set the value of the specified DBIx::Log4perl attribute
 (see L</Attributes>).
 
 =head2 dbix_l4p_logdie
@@ -594,20 +597,7 @@ If you get an error like:
 
 in the error handler it is because it was missing from DBI's XS code.
 
-This is probably fixed in DBI 1.51.
-
-The actual code you need to change is:
-
-  --- DBI.xs.orig Mon Mar 27 16:37:29 2006
-  +++ DBI.xs      Mon Mar 27 16:38:10 2006
-  @@ -1947,6 +1947,7 @@
-          else if (!(     (*key=='H' && strEQ(key, "HandleError"))
-                  ||      (*key=='H' && strEQ(key, "HandleSetErr"))
-                  ||      (*key=='S' && strEQ(key, "Statement"))
-  +               ||      (*key=='U' && strEQ(key, "Username"))
-                  ||      (*key=='P' && strEQ(key, "ParamValues"))
-                  ||      (*key=='P' && strEQ(key, "Profile"))
-                  ||      (*key=='C' && strEQ(key, "CursorName"))
+This is fixed in DBI 1.51.
 
 =head2 DBI and $h->{ParamArrays}
 
@@ -654,9 +644,9 @@ I believe this code is now added in DBD::mysql 3.0003_1.
 
 You will need at least Log::Log4perl 1.04 and DBI 1.50.
 
-DBI-1.51 (I hope) will contain the changes listed under L</NOTES>.
+DBI-1.51 contains the changes listed under L</NOTES>.
 
-Version of Log::Log4perl before 1.04 work but unfortunately you will
+Versions of Log::Log4perl before 1.04 work but unfortunately you will
 get code references in some of the log output where DBIx::Log4perl
 does:
 

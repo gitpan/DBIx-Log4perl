@@ -1,4 +1,4 @@
-# $Id: db.pm 169 2006-04-24 14:00:13Z martin $
+# $Id: db.pm 208 2006-06-21 15:10:33Z martin $
 use strict;
 use warnings;
 use DBI;
@@ -14,8 +14,8 @@ sub prepare {
   $dbh->_dbix_l4p_debug('prepare', $args[0])
     if (($LogMask & DBIX_L4P_LOG_INPUT) &&
 	  (caller !~ /^DBIx::Log4perl/)); # e.g. from selectall_arrayref
-    my $sth = $dbh->SUPER::prepare(@args);
-  $sth->{private_DBIx_Log4perl} = $h;
+  my $sth = $dbh->SUPER::prepare(@args);
+  $sth->{private_DBIx_Log4perl} = $h if ($sth);
   return $sth;
 }
 
