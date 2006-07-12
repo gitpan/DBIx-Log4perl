@@ -1,5 +1,36 @@
 Revision history for Perl extension DBIx::Log4perl.
 
+0.06  Fri Jun 23 2006
+
+  Fix problem where error handler was not put in place unless some
+  attributes are passed in the connect method.
+
+  Fix unitialised string in ne in the do method if the do method in
+  the driver failed.
+
+  Changes to Captured error output:
+    reformatted to be more readable
+    differentiate DBI::lasth Statement from SQL on other handles
+    Collect sub statements off and dbh and output any values and
+      ParamValues at the end.
+    Fix bug dereferencing Statement from private__DBIx_Log4perl handle
+      instead of the dbh.
+    Add Kids and ActiveKids output
+    ParamValues for some methods where the statement was already
+      destroyed e.g. a failed do, were not output in the captured
+      error because they were not saved.
+
+  Change error handler to display true number of sub statements
+  (ChildHandles) under a dbh instead of the index of the last child
+  handle i.e. show 0 not -1 for none. Add missing newline in output.
+
+  Avoid problem in global cleanup with
+  "(in cleanup) Can't call method "FETCH" on an undefined value" message
+  when disconnect not called.
+
+  Avoid logging of do method calls showing prepare/execute and affected
+  logging.
+
 0.05  Fri Jun 16 2006
 
   Fixed a few typos in the pod.

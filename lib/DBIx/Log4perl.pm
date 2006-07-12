@@ -1,4 +1,4 @@
-# $Id: Log4perl.pm 209 2006-06-22 09:45:41Z martin $
+# $Id: Log4perl.pm 218 2006-06-29 07:47:55Z martin $
 require 5.008;
 
 use strict;
@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -128,11 +128,30 @@ sub dbix_l4p_setattr {
     $h->{$m->{$item}} = $value;
     1;
 }
+
+#
+# set_err handler so we can capture ParamValues before a statement
+# is destroyed.
+# If the use of DBIx::Log4perl passed in an error handler that is
+# called before returning.
+#
+sub _set_err_handler {
+    my ($handle, $err, $errstr, $state, $method) = @_;
+
+    # Capture ParamValues
+    if ($handle) {
+	my $h = $handle->{private_DBIx_Log4perl};
+	$h->{ParamValues} = $handle->{ParamValues}
+	    if (exists($handle->{ParamValues}));
+	return $h->{HandleSetErr}(@_) if (exists($h->{HandleSetErr}));
+    }
+    return 0;
+}
 #
 # Error handler to capture errors and log them
 # Whatever, errors are passed on.
 # if the user of DBIx::Log4perl passed in an error handler that is called
-# before exiting.
+# before returning.
 #
 sub _error_handler {
     my ($msg, $handle, $method_ret) = @_;
@@ -146,46 +165,49 @@ sub _error_handler {
     $lh = $h->{logger} if ($h && exists($h->{logger}));
     return 0 if (!$lh);
 
-    $out .=  "  " . "=" x 60 . "\n  $msg\n";
+    # start with error message
+    $out .=  '  ' . '=' x 60 . "\n  $msg\n";
 
-    $out .= '  lasth type: ' . $DBI::lasth->{Type} . "\n"
-      if ($DBI::lasth->{Type});
-    $out .= '  last Statement: ' . $DBI::lasth->{Statement}
-      if ($DBI::lasth->{Statement});
+    if ($DBI::lasth) {
+	$out .= "  lasth type: $DBI::lasth->{Type}\n"
+	    if ($DBI::lasth->{Type});
+	$out .= "  lasth Statement ($DBI::lasth):\n    " .
+	    "$DBI::lasth->{Statement}\n"
+		if ($DBI::lasth->{Statement});
+    }
     # get db handle if we have an st
     my $type = $handle->{Type};
-    my (@pos_sts, $sql);
-    if ($type eq "st") {
+    my $sql;
+    if ($type eq 'st') {	# given statement handle
 	$dbh = $handle->{Database};
 	$sql = $handle->{Statement};
-
     } else {
-	# get list of statements under the db
-	push @pos_sts, $_ for (grep { defined } @{$h->{ChildHandles}});
-	$out .= "  " . $#pos_sts . " sub statements\n";
-	# We have a db and want the sql
-	# We've got other sts under this db but we cannot tell if ANY of
-	# them are the right one (or possibly none - e.g. app using do())
+	# given db handle
+	# We've got other stmts under this db but we'll deal with those later
 	$sql = 'Possible SQL: ';
-	$sql .= '/' . $h->{Statement} . "/\n  " if (exists($h->{Statement}));
-	$sql .= '/' . $dbh->{Statement} . "/\n  "
+	$sql .= "/$h->{Statement}/" if (exists($h->{Statement}));
+	$sql .= "/$dbh->{Statement}/"
 	  if ($dbh->{Statement} &&
-		(exists($h->{Statement}) && 
-			  ($dbh->{Statement} ne $h->{Statement})));
-	foreach my $stmt (@pos_sts) {
-	    $sql .= '/' . $stmt->{Statement} . "/\n  "
-	      if ($stmt->{Statement} &&
-		    (exists($h->{Statement}) &&
-			      ($h->{Statement} ne $stmt->{Statement})));
-	}
+		(exists($h->{Statement}) &&
+		 ($dbh->{Statement} ne $h->{Statement})));
     }
 
     my $dbname = exists($dbh->{Name}) ? $dbh->{Name} : "";
     my $username = exists($dbh->{Username}) ? $dbh->{Username} : "";
     $out .= "  DB: $dbname, Username: $username\n";
-
     $out .= "  handle type: $type\n  SQL: $sql\n";
-    $out .= "  msg: " . $handle->errstr . "\n" if ($handle->errstr);
+    $out .= '  db Kids=' . $dbh->{Kids} .
+	', ActiveKids=' . $dbh->{ActiveKids} . "\n";
+    $out .= "  DB errstr: " . $handle->errstr . "\n"
+	if ($handle->errstr && ($handle->errstr ne $msg));
+
+    if (exists($h->{ParamValues}) && $h->{ParamValues}) {
+	$out .= "  ParamValues captured in HandleSetErr:\n    ";
+	foreach (sort keys %{$h->{ParamValues}}) {
+	    $out .= DBI::neat($h->{ParamValues}->{$_}) . ",";
+	}
+	$out .= "\n";
+    }
     if ($type eq 'st') {
 	my $str = "";
 	if ($handle->{ParamValues}) {
@@ -198,6 +220,27 @@ sub _error_handler {
 	  Data::Dumper->Dump([$handle->{ParamArrays}], ['ParamArrays'])
 	      if ($handle->{ParamArrays});
     }
+    my @substmts;
+    # get list of statements under the db
+    push @substmts, $_ for (grep { defined } @{$dbh->{ChildHandles}});
+    $out .= "  " . scalar(@substmts) . " sub statements:\n";
+    if (scalar(@substmts)) {
+	foreach my $stmt (@substmts) {
+	    $out .= "  stmt($stmt):\n";
+	    $out .= '    SQL(' . $stmt->{Statement} . ")\n  "
+		if ($stmt->{Statement} &&
+		    (exists($h->{Statement}) &&
+		     ($h->{Statement} ne $stmt->{Statement})));
+	    if (exists($stmt->{ParamValues}) && $stmt->{ParamValues}) {
+		$out .= '   Params(';
+		foreach (sort keys %{$stmt->{ParamValues}}) {
+		    $out .= DBI::neat($stmt->{ParamValues}->{$_}) . ",";
+		}
+		$out .= ")\n";
+	    }
+	}
+    }
+
     local $Carp::MaxArgLen = 256;
     $out .= "  " .Carp::longmess("DBI error trap");
     $out .= "  " . "=" x 60 . "\n";
@@ -233,20 +276,27 @@ sub connect {
 	# save log mask
 	$LogMask = $attr->{DBIx_l4p_logmask}
 	  if (exists($attr->{DBIx_l4p_logmask}));
-	if ($LogMask & DBIX_L4P_LOG_ERRCAPTURE) {
-	    # save any error handler for DBI and replace with our own
-	    $h{HandleError} = $attr->{HandleError}
-	      if (exists($attr->{HandleError}));
-	    $attr->{HandleError} = \&_error_handler;
-	}
 	# remove our attrs from connection attrs
 	delete $attr->{DBIx_l4p_init};
 	delete $attr->{DBIx_l4p_class};
 	delete $attr->{DBIx_l4p_logger};
 	delete $attr->{DBIx_l4p_logmask};
     }
+    #
+    # If capturing errors then save any error handler and set_err Handler
+    # passed to us and replace with our own.
+    #
+    if ($LogMask & DBIX_L4P_LOG_ERRCAPTURE) {
+	$h{HandleError} = $attr->{HandleError}
+	    if (exists($attr->{HandleError}));
+	$attr->{HandleError} = \&_error_handler;
+	$h{HandleSetErr} = $attr->{HandleSetErr}
+	    if (exists($attr->{HandleSetErr}));
+	$attr->{HandleSetErr} = \&_set_err_handler;
+    }
     $h{logger} = Log::Log4perl->get_logger() if (!exists($h{logger}));
     $glogger = $h{logger};
+    
     my $dbh = $drh->SUPER::connect($dsn, $user, $pass, $attr);
     return $dbh if (!$dbh);
 
@@ -266,8 +316,6 @@ sub connect {
 sub dbix_l4p_logdie
 {
     my ($drh, $msg) = @_;
-    my ($dbh, $sth);
-
     _error_handler($msg, $drh);
     die "$msg";
 }

@@ -1,4 +1,4 @@
-# $Id: db.pm 208 2006-06-21 15:10:33Z martin $
+# $Id: db.pm 215 2006-06-28 13:58:01Z martin $
 use strict;
 use warnings;
 use DBI;
@@ -10,10 +10,12 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 
 sub prepare {
   my($dbh, @args) = @_;
+
   my $h = $dbh->{private_DBIx_Log4perl};
   $dbh->_dbix_l4p_debug('prepare', $args[0])
     if (($LogMask & DBIX_L4P_LOG_INPUT) &&
-	  (caller !~ /^DBIx::Log4perl/)); # e.g. from selectall_arrayref
+	  (caller !~ /^DBIx::Log4perl/) &&
+          (caller !~ /^DBD::/)); # e.g. from selectall_arrayref
   my $sth = $dbh->SUPER::prepare(@args);
   $sth->{private_DBIx_Log4perl} = $h if ($sth);
   return $sth;
@@ -29,10 +31,10 @@ sub do {
 
   my $affected = $dbh->SUPER::do(@args);
 
-  if (!$affected &&
-	($LogMask & DBIX_L4P_LOG_ERRCAPTURE) &&
-	  !($LogMask & DBIX_L4P_LOG_INPUT)) { # not already logged
-      $dbh->_dbix_l4p_error('do error for ', @args);
+  if (!defined($affected)) {
+      $dbh->_dbix_l4p_error('do error for ', @args)
+	  if (($LogMask & DBIX_L4P_LOG_ERRCAPTURE) &&
+	      !($LogMask & DBIX_L4P_LOG_INPUT)); # not already logged
   } elsif (defined($affected) && $affected eq '0E0' &&
 	  ($LogMask & DBIX_L4P_LOG_WARNINGS)) {
       $dbh->_dbix_l4p_warning('no effect from ', @args);
@@ -119,10 +121,18 @@ sub selectall_hashref {
 sub disconnect {
     my $dbh = shift;
 
-    my $h = $dbh->{private_DBIx_Log4perl};
-    $h->{logger}->debug("disconnect")
-      if ($LogMask & DBIX_L4P_LOG_CONNECT);
-
+    if ($dbh) {
+	my $h;
+	eval {
+	    # Avoid 
+	    # (in cleanup) Can't call method "FETCH" on an undefined value
+	    $h = $dbh->{private_DBIx_Log4perl};
+	};
+	if (!$@) {
+	    $h->{logger}->debug("disconnect")
+		if ($LogMask & DBIX_L4P_LOG_CONNECT);
+	}
+    }
     return $dbh->SUPER::disconnect;
     
 }

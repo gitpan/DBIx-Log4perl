@@ -1,4 +1,4 @@
-# $Id: st.pm 208 2006-06-21 15:10:33Z martin $
+# $Id: st.pm 212 2006-06-23 16:44:43Z martin $
 use strict;
 use warnings;
 use DBI;
@@ -13,20 +13,19 @@ sub execute {
     my $h = $sth->{private_DBIx_Log4perl};
 
     $sth->_dbix_l4p_debug('execute', @args)
-      if ($LogMask & DBIX_L4P_LOG_INPUT);
+      if (($LogMask & DBIX_L4P_LOG_INPUT) && (caller !~ /^DBD::/));
 
     my $ret = $sth->SUPER::execute(@args);
 
-    if ((!$ret) &&		# error
-	  ($LogMask && DBIX_L4P_LOG_ERRCAPTURE) && # logging errors
-	  caller !~ /^DBD::/) {	# not called from DBD e.g. execute_array
-	$sth->_dbix_l4p_error('execute', @args)
-	  if (!($LogMask & DBIX_L4P_LOG_INPUT));
-	$h->{logger}->error("\tfailed with " . $sth->errstr);
-    } elsif (defined($ret) &&
-	     (!defined($sth->{NUM_OF_FIELDS})) &&
-	     ($LogMask & DBIX_L4P_LOG_INPUT)) {
-        $sth->_dbix_l4p_debug('affected', $ret);
+    if (!$ret) {		# error
+	$h->{logger}->error("\tfailed with " . $sth->errstr)
+	    if (($LogMask && DBIX_L4P_LOG_ERRCAPTURE) && # logging errors
+		(caller !~ /^DBD::/)); # not called from DBD e.g. execute_array
+    } elsif (defined($ret)) {
+        $sth->_dbix_l4p_debug('affected', $ret)
+	    if ((!defined($sth->{NUM_OF_FIELDS})) && # not a result-set
+		($LogMask & DBIX_L4P_LOG_INPUT)	&& # logging input
+		(caller !~ /^DBD::/));
     }
     return $ret;
 }
