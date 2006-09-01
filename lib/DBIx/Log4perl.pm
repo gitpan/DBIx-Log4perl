@@ -1,4 +1,4 @@
-# $Id: Log4perl.pm 218 2006-06-29 07:47:55Z martin $
+# $Id: Log4perl.pm 244 2006-07-25 12:14:52Z martin $
 require 5.008;
 
 use strict;
@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -90,7 +90,8 @@ sub _dbix_l4p_error {
 sub _dbix_l4p_attr_map {
     return {DBIx_l4p_logger => 'logger',
 	    DBIx_l4p_init => 'init',
-	    DBIx_l4p_class => 'class'
+	    DBIx_l4p_class => 'class',
+	    DBIx_l4p_logmask => 'logmask'
 	   };
 }
 
@@ -274,19 +275,22 @@ sub connect {
 	    $h{logger} = Log::Log4perl->get_logger(); # "DBIx::Log4perl"
 	}
 	# save log mask
-	$LogMask = $attr->{DBIx_l4p_logmask}
+	$h{logmask} = $attr->{DBIx_l4p_logmask}
 	  if (exists($attr->{DBIx_l4p_logmask}));
+
 	# remove our attrs from connection attrs
 	delete $attr->{DBIx_l4p_init};
 	delete $attr->{DBIx_l4p_class};
 	delete $attr->{DBIx_l4p_logger};
 	delete $attr->{DBIx_l4p_logmask};
     }
+    # take global log mask if non defined
+    $h{logmask} = $LogMask if (!exists($h{logmask}));
     #
     # If capturing errors then save any error handler and set_err Handler
     # passed to us and replace with our own.
     #
-    if ($LogMask & DBIX_L4P_LOG_ERRCAPTURE) {
+    if ($h{logmask} & DBIX_L4P_LOG_ERRCAPTURE) {
 	$h{HandleError} = $attr->{HandleError}
 	    if (exists($attr->{HandleError}));
 	$attr->{HandleError} = \&_error_handler;
@@ -301,7 +305,7 @@ sub connect {
     return $dbh if (!$dbh);
 
     $dbh->{private_DBIx_Log4perl} = \%h;
-    if ($LogMask & DBIX_L4P_LOG_CONNECT) {
+    if ($h{logmask} & DBIX_L4P_LOG_CONNECT) {
 	$h{logger}->debug("connect: $dsn, $user");
 	no strict 'refs';
 	my $v = "DBD::" . $dbh->{Driver}->{Name} . "::VERSION";
@@ -407,7 +411,7 @@ may be ORed together to obtain the logging level you require:
 =item DBIX_L4P_LOG_DEFAULT
 
 By default LogMask is set to DBIX_L4P_LOG_DEFAULT which is currently
-DBIX_L4P_LOG_TXN | DBIC_L4P_LOG_CONNECT | DBIX_L4P_LOG_INPUT | DBIX_L4P_LOG_ERRCAPTURE.
+DBIX_L4P_LOG_TXN | DBIC_L4P_LOG_CONNECT | DBIX_L4P_LOG_INPUT | DBIX_L4P_LOG_ERRCAPTURE | DBIX_L4P_LOG_ERRORS.
 
 =item DBIX_L4P_LOG_ALL
 
@@ -441,6 +445,11 @@ and version will be logged at Log4perl info level.
 
 Log at Log4perl debug level all calls to C<begin_work>, C<commit> and
 C<rollback>.
+
+=item DBIX_L4P_LOG_ERRORS
+
+Log at Log4perl error level any method which fails which is not caught
+by RaiseError. Currently this is only the execute_array method.
 
 =item DBIX_L4P_LOG_WARNINGS
 
@@ -610,6 +619,78 @@ this output 1062 is the native database error number, the second
 argument is the error text, the third argument the state and the
 additional lines attempt to highlight the parameters which caused the
 problem.
+
+=head2 Example captured error
+
+By default, DBIx::Log4perl replaces any DBI error handler you have
+with its own error handler which first logs all possible information
+about the SQL that was executing when the error occurred, the
+parameters involved, the statement handle and a stack dump of where
+the error occurred.  Once DBIx::Log4perl's error handler is executed
+it continues to call any error handler you have specifically set in
+you Perl DBI code.
+
+Assuming you'd just run the following script:
+
+  use Log::Log4perl qw(get_logger :levels);
+  Log::Log4perl->init_and_watch("example.conf");
+  my $dbh = DBIx::Log4perl->connect('dbi:Oracle:XE', 'user', 'password) or
+      die "$DBD::errstr";
+  $dbh->do("insert into mytable values(?, ?)", undef, 1,
+           'string too long for column - will be truncated which is an error');
+  $dbh->disconnect;
+
+but the string argument to the insert is too big for the column then
+DBIx::Log4perl would provide error output similar to the following:
+
+  FATAL -   ============================================================
+  DBD::Oracle::db do failed: ORA-12899: value too large for column
+   "BET"."MYTABLE"."B" (actual: 64, maximum: 10) (DBD ERROR: error possibly
+   near <*> indicator at char 32 in 'insert into martin values(:p1, :<*>p2)')
+   [for Statement "insert into martin values(?, ?)"]
+  lasth Statement (DBIx::Log4perl::db=HASH(0x974cf64)):
+    insert into martin values(?, ?)
+  DB: XE, Username: user
+  handle type: db
+  SQL: Possible SQL: /insert into mytable values(?, ?)/
+  db Kids=0, ActiveKids=0
+  DB errstr: ORA-12899: value too large for column "BET"."MYTABLE"."B"
+   (actual: 64, maximum: 10) (DBD ERROR: error possibly near <*> indicator
+   at char 32 in 'insert into mytable values(:p1, :<*>p2)')
+  ParamValues captured in HandleSetErr:
+    1,'string too long for column - will be truncated which is an error',
+  0 sub statements:
+  DBI error trap at /usr/lib/perl5/site_perl/5.8.8/DBIx/Log4perl/db.pm line 32
+        DBIx::Log4perl::db::do('DBIx::Log4perl::db=HASH(0x97455d8)',
+        'insert into mytable values(?, ?)', 'undef', 1, 'string too long for
+         column - will be truncated which is an error') called at errors.pl
+         line 12
+  ============================================================
+
+What this shows is:
+
+o the error reported by the DBD and the method called (do in this case).
+
+o the last handle used and the SQL for the last statement executed
+
+o the connection the error occurred in
+
+o the handle type the error occurred on, db or stmt (db in this case)
+
+o item Other possible SQL that may be in error under this db
+connection e.g. if you were executing multiple statements on a single
+db connection
+
+o the Kids and ActiveKids value for this db - (see DBI docs)
+
+o the error message text in DBI::errstr
+
+o any sql parameters passed to DBI (see DBI docs for ParamValues)
+
+o a trace of where the problem occurred In this case the final problem
+  was in db.pm but as this is DBIx::Log4perl's do method, the real
+  issue was in the stack element below this which was errors.pl line
+  12.
 
 =head2 Use of Data::Dumper
 

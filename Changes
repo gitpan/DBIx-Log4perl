@@ -1,6 +1,39 @@
 Revision history for Perl extension DBIx::Log4perl.
 
+0.07  Tues July 25 2006
+
+  Fix bug in execute_array which did not handle scalars in parameter
+  list for execute array. e.g.
+
+  execute_array(undef,
+	        \@p1_list, # OK
+	        $p2 # was not handled properly
+  )
+
+  Added support to execute_array to automatically add an
+  ArrayTupleStatus if one was not specified so DBIx::Log4perl can log
+  errors in execute_array.
+
+  Fixed bug in execute_array where comparison with logging mask
+  was && instead of &.
+
+  Fixed bug in execute_array which did not handle passing undef
+  attributes as first argument to execute_array.
+
+  Added missing support for finish method in DBI.
+
+  Added missing support for prepare_cached method in DBI.
+
+  Added missing support for get_info method in DBI.
+
 0.06  Fri Jun 23 2006
+
+  Added example captured error and description to POD.
+
+  Fix problem where attribute DBIx_l4p_logmask was not documented
+  properly and was not acted upon.
+
+  execute_array was logging errors even when not asked to.
 
   Fix problem where error handler was not put in place unless some
   attributes are passed in the connect method.
