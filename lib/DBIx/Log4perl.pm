@@ -1,4 +1,4 @@
-# $Id: Log4perl.pm 244 2006-07-25 12:14:52Z martin $
+# $Id: Log4perl.pm 279 2006-09-01 18:36:01Z martin $
 require 5.008;
 
 use strict;
@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -339,14 +339,14 @@ parameters, result-sets, transactions etc to a Log::Log4perl handle.
   use DBIx::Log4perl;
 
   Log::Log4perl->init("/etc/mylog.conf");
-  my $dbh - DBIx::Log4perl->connect('DBI:odbc:mydsn', $user, $pass);
+  my $dbh = DBIx::Log4perl->connect('DBI:odbc:mydsn', $user, $pass);
   $dbh->DBI_METHOD(args);
 
   or
 
   use DBIx::Log4perl;
-  my $dbh - DBIX::Log4perl->connect('DBI:odbc:mydsn', $user, $pass
-                                    {DBIx_l4p_log => /etc/mylog.conf,
+  my $dbh = DBIX::Log4perl->connect('DBI:odbc:mydsn', $user, $pass
+                                    {DBIx_l4p_init => "/etc/mylog.conf",
                                      DBIx_l4p_class => "My::Package");
   $dbh->DBI_METHOD(args);
 

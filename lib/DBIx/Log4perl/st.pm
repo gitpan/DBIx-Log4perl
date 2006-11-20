@@ -1,4 +1,4 @@
-# $Id: st.pm 265 2006-08-04 15:51:00Z martin $
+# $Id: st.pm 284 2006-09-07 13:50:57Z martin $
 use strict;
 use warnings;
 use DBI;
@@ -53,32 +53,54 @@ sub execute_array {
     } elsif (!$args[0]) {
 	$args[0] = {ArrayTupleStatus => \my @tuple_status};
     }
-    my $executed = $sth->SUPER::execute_array(@args);
+    my $array_tuple_status = $args[0]->{ArrayTupleStatus};
+
+    #
+    # NOTE: We have a problem here. The DBI pod stipulates that
+    # execute_array returns undef (for error) or the number of tuples
+    # executed. If we want to access the number of rows updated or
+    # inserted then we need to add up the values in the ArrayTupleStatus.
+    # Unfortunately, the drivers which implement execute_array themselves
+    # (e.g. DBD::Oracle) don't do this properly (e.g. DBD::Oracle 1.18a).
+    # As a result, until this is sorted out, our logging of execute_array
+    # may be less than accurate.
+    #
+    my ($executed, $affected) = $sth->SUPER::execute_array(@args);
     if (!$executed) {
         #print Data::Dumper->Dump([$sth->{ParamArrays}], ['ParamArrays']), "\n";
-	return $executed unless ($h->{logmask} & DBIX_L4P_LOG_ERRORS);
-	return $executed if (!$args[0] || ref($args[0] ne 'HASH') ||
-			       !exists($args[0]->{ArrayTupleStatus}));
+	if (!$h->{logmask} & DBIX_L4P_LOG_ERRORS) {
+	    return $executed unless wantarray;
+	    return ($executed, $affected);
+	}
         my $pa = $sth->{ParamArrays};
-        if (scalar(@args) > 0) {
-	    $h->{logger}->error("execute_array error:");
-	  my $ats = $args[0]->{ArrayTupleStatus};
-	  for my $n (0..@{$ats}-1) {
-	    next if (!ref($ats->[$n]));
-	    $sth->_dbix_l4p_error('Error', $ats->[$n]);
+	$h->{logger}->error("execute_array error:");
+	for my $n (0..@{$array_tuple_status}-1) {
+	    next if (!ref($array_tuple_status->[$n]));
+	    $sth->_dbix_l4p_error('Error', $array_tuple_status->[$n]);
 	    my @plist;
 	    foreach my $p (keys %{$pa}) {
-		if (ref($pa->{$p})) {
+	        if (ref($pa->{$p})) {
 		    push @plist, $pa->{$p}->[$n];
 		} else {
 		    push @plist, $pa->{$p};
 		}
 	    }
 	    $h->{logger}->error(sub {"\t for " . join(',', @plist)});
-	  }
 	}
+    } elsif ($executed) {
+	if ((defined($sth->{NUM_OF_FIELDS})) || # result-set
+		!($h->{logmask} & DBIX_L4P_LOG_INPUT)) { # logging input
+	    return $executed unless wantarray;
+	    return ($executed, $affected);
+	}
+	$sth->_dbix_l4p_debug("executed $executed, affected " .
+				  DBI::neat($affected));
     }
-    return $executed;
+    $h->{logger}->info(sub {Data::Dumper->Dump(
+	[$array_tuple_status], ['ArrayTupleStatus'])})
+	if ($h->{logmask} & DBIX_L4P_LOG_INPUT);
+    return $executed unless wantarray;
+    return ($executed, $affected);
 }
 
 sub bind_param {

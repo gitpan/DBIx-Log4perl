@@ -1,5 +1,41 @@
 Revision history for Perl extension DBIx::Log4perl.
 
+0.08  Fri September 1 2006
+
+  Bump to 0.08.
+
+  Fix minor bug in pod "$dbh - DBIx::Log4perl->connect(..." should
+  be "=" not "-".
+
+  Fix bug in pod with DBIx_l4p_class.
+
+  In execute_array handle case where it does not insert/update anything
+  so we report the number of affected rows as 0.
+
+  In execute_array we add an ArrayTupleStatus if one was no provided so
+  the later code which looks for ArrayTupleStatus being set is redundant.
+
+  Further fixes to execute_array due to misreading the DBI
+  specification. execute_array returns undef for error or the number
+  of tuples executed.  DBIx::Log4perl was incorrectly assuming the
+  execute_array return was the number of affected rows. NOTE most DBDs
+  don't return the correct values anyway - see note in st.pm.
+
+  Added support for new array context supporting execute_array to be
+  added in DBI 1.53.
+
+  Fix bug in Makefile.PL causing DBI_PASS to be ignored during testing.
+
+  Default test table to "drop_me_dbixl4p"
+
+  Disable PrintError in simple.t when test table is being dropped in
+  case it does not exist.
+
+  Log ArrayTupleStatus in execute_array calls.
+
+  Fix rt.cpan.org issue 23500. File::Spec::tmpdir might not return a
+  directory on Windows. Test before attempting to use it.
+
 0.07  Tues July 25 2006
 
   Fix bug in execute_array which did not handle scalars in parameter

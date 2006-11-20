@@ -1,4 +1,4 @@
-# $Id: lib.pl 208 2006-06-21 15:10:33Z martin $
+# $Id: lib.pl 131 2006-11-20 16:02:23Z martin $
 use Cwd;
 use File::Spec;
 
@@ -25,14 +25,16 @@ sub get_config
 }
 sub config
 {
+    my $td = File::Spec->tmpdir or die q/Can't find a temporary directory to use. Please set TMPDIR, TEMP or TMP environment variables to a valid cirectory/;
+
     open OUT, ">pipe.pl" or die "Failed to create pipe.pl - $!";
     print OUT "#!$^X\n";
     print OUT 'while (<STDIN>) {open OUT, ">>dbixl4p.log"; print OUT $_;close OUT;}';
     close OUT;
     chmod 0777, "pipe.pl";
 
-    $logtmp1 = File::Spec->catfile(File::Spec->tmpdir, 'dbixroot.log');
-    $logtmp2 = File::Spec->catfile(File::Spec->tmpdir, 'dbix.log');
+    $logtmp1 = File::Spec->catfile($td, 'dbixroot.log');
+    $logtmp2 = File::Spec->catfile($td, 'dbix.log');
     my $cwd = getcwd();
     my $pipe = File::Spec->catfile($cwd, "pipe.pl");
     my $loginit = qq(

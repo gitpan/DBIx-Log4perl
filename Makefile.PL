@@ -20,13 +20,15 @@ my ($dsn, $user, $password, $table) = ('', '', 'UNDEF', '');
 
 $dsn = $ENV{DBI_DSN} if (exists($ENV{DBI_DSN}));
 $user = $ENV{DBI_USER} if (exists($ENV{DBI_USER}));
-$password = $NV{DBI_PASS} if (exists($ENV{DBI_PASS}));
+$password = $ENV{DBI_PASS} if (exists($ENV{DBI_PASS}));
 $table = $ENV{DBI_TABLE} if (exists($ENV{DBI_TABLE}));
 
 $dsn = $opt->{dsn} if (exists($opt->{dsn}));
 $user = $opt->{user} if (exists($opt->{user}));
 $password = $opt->{password} if (exists($opt->{password}));
 $table = $opt->{table} if (exists($opt->{table}));
+
+$table ||= 'drop_me_dbixl4p';
 
 open OUT, ">dbixl4p.config";
 print OUT "$dsn\n";

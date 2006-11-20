@@ -1,4 +1,4 @@
-# $Id: simple.t 208 2006-06-21 15:10:33Z martin $
+# $Id: simple.t 284 2006-09-07 13:50:57Z martin $
 $^W = 1;
 
 push @INC, 't';
@@ -40,7 +40,10 @@ BAIL_OUT("Failed to connect to database - all other tests abandoned")
 	if (!$dbh);
 ok(check_log(\$out), 'test for log output');
 
-eval {$dbh->do(qq/drop table $table/)};
+{
+    local $dbh->{PrintError} = 0;
+    eval {$dbh->do(qq/drop table $table/)};
+}
 ok(check_log(\$out), 'drop test table');
 ok($dbh->do(qq/create table $table (a int primary key, b char(50))/),
    'create test table');
