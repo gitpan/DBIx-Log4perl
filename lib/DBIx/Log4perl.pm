@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -247,7 +247,7 @@ sub _error_handler {
     my $dbname = exists($dbh->{Name}) ? $dbh->{Name} : "";
     my $username = exists($dbh->{Username}) ? $dbh->{Username} : "";
     $out .= "  DB: $dbname, Username: $username\n";
-    $out .= "  handle type: $type\n  SQL: $sql\n";
+    $out .= "  handle type: $type\n  SQL: " . DBI::neat($sql) . "\n";
     $out .= '  db Kids=' . $dbh->{Kids} .
 	', ActiveKids=' . $dbh->{ActiveKids} . "\n";
     $out .= "  DB errstr: " . $handle->errstr . "\n"
