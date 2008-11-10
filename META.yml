@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                DBIx-Log4perl
-version:             0.12
+version:             0.13
 abstract:            Perl extension for DBI to selectively log SQL,
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.36
