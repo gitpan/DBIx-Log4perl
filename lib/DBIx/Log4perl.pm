@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -260,7 +260,7 @@ sub _error_handler {
     if (exists($h->{ParamValues}) && $h->{ParamValues}) {
 	$out .= "  ParamValues captured in HandleSetErr:\n    ";
 	foreach (sort keys %{$h->{ParamValues}}) {
-	    $out .= DBI::neat($h->{ParamValues}->{$_}) . ",";
+	    $out .= "$_=" . DBI::neat($h->{ParamValues}->{$_}) . ",";
 	}
 	$out .= "\n";
     }
@@ -268,7 +268,7 @@ sub _error_handler {
 	my $str = "";
 	if ($handle->{ParamValues}) {
 	    foreach (sort keys %{$handle->{ParamValues}}) {
-		$str .= DBI::neat($handle->{ParamValues}->{$_}) . ",";
+		$str .= "$_=" . DBI::neat($handle->{ParamValues}->{$_}) . ",";
 	    }
 	}
 	$out .= "  ParamValues: $str\n";
@@ -290,13 +290,17 @@ sub _error_handler {
 	    if (exists($stmt->{ParamValues}) && $stmt->{ParamValues}) {
 		$out .= '   Params(';
 		foreach (sort keys %{$stmt->{ParamValues}}) {
-		    $out .= DBI::neat($stmt->{ParamValues}->{$_}) . ",";
+		    $out .= "$_=" . DBI::neat($stmt->{ParamValues}->{$_}) . ",";
 		}
 		$out .= ")\n";
 	    }
 	}
     }
 
+    if (exists($dbh->{Callbacks})) {
+        $out .= "  Callbacks exist for " .
+            join(",", keys(%{$dbh->{Callbacks}})) . "\n";
+    }
     local $Carp::MaxArgLen = 256;
     $out .= "  " .Carp::longmess("DBI error trap");
     $out .= "  " . "=" x 60 . "\n";
@@ -413,8 +417,9 @@ __END__
 
 =head1 NAME
 
-DBIx::Log4perl - Perl extension for DBI to selectively log SQL,
-parameters, result-sets, transactions etc to a Log::Log4perl handle.
+DBIx::Log4perl - Perl extension for DBI to selectively log DBI
+methods, SQL, parameters, result-sets, transactions etc to a
+Log::Log4perl handle.
 
 =head1 SYNOPSIS
 
@@ -428,9 +433,9 @@ parameters, result-sets, transactions etc to a Log::Log4perl handle.
   or
 
   use DBIx::Log4perl;
-  my $dbh = DBIx::Log4perl->connect('DBI:odbc:mydsn', $user, $pass,
+  my $dbh = DBIx::Log4perl->connect('dbi:ODBC:mydsn', $user, $pass,
                                     {DBIx_l4p_init => "/etc/mylog.conf",
-                                     DBIx_l4p_class => "My::Package");
+                                     DBIx_l4p_class => "My::Package"});
   $dbh->DBI_METHOD(args);
 
 =head1 DESCRIPTION
