@@ -29,26 +29,26 @@ sub finish {
 # fetching under
 #
 sub execute {
-    my ($sth, @args) = @_;
+    my $sth = shift;
     my $h = $sth->{private_DBIx_Log4perl};
 
     if (($h->{logmask} & DBIX_L4P_LOG_INPUT) &&
 	(caller !~ /^DBD::/o) &&
 	(!$h->{dbd_specific})) {
-	if (scalar(@args)) {
+	if (scalar(@_)) {
 	    $sth->_dbix_l4p_debug(
                 $h, 2,
                 "execute($h->{dbh_no}.$sth->{private_DBIx_st_no}) (" .
                     ($sth->{Statement} ? $sth->{Statement} : '') . ')',
-                @args);
+                @_);
 	} else {
 	    $sth->_dbix_l4p_debug(
                 $h, 2,
-                "execute($h->{dbh_no}.$sth->{private_DBIx_st_no})", @args);
+                "execute($h->{dbh_no}.$sth->{private_DBIx_st_no})", @_);
 	}
     }
 
-    my $ret = $sth->SUPER::execute(@args);
+    my $ret = $sth->SUPER::execute(@_);
 
     #
     # If DBDSPECIFIC is enabled and this is DBD::Oracle we will attempt to
@@ -71,6 +71,7 @@ sub execute {
     if (($h->{logger}->is_debug()) &&
         ($h->{logmask} & DBIX_L4P_LOG_DBDSPECIFIC) &&
     	($h->{driver} eq 'Oracle') && (!$h->{dbd_specific})) {
+
 	my ($errstr, $err, $state) = (
 	    $sth->errstr, $sth->err, $sth->state);
     	$h->{dbd_specific} = 1;
@@ -173,24 +174,25 @@ sub execute_array {
 }
 
 sub bind_param {
-    my($sth, @args) = @_;
+    my $sth = shift;
+
     my $h = $sth->{private_DBIx_Log4perl};
 
     $sth->_dbix_l4p_debug(
-        $h, 2, "bind_param($h->{dbh_no}.$sth->{private_DBIx_st_no})", @args)
+        $h, 2, "bind_param($h->{dbh_no}.$sth->{private_DBIx_st_no})", @_)
         if ($h->{logmask} & DBIX_L4P_LOG_INPUT);
 
-    return $sth->SUPER::bind_param(@args);
+    return $sth->SUPER::bind_param(@_);
 }
 
 sub bind_param_inout {
-    my($sth, @args) = @_;
+    my $sth = shift;
     my $h = $sth->{private_DBIx_Log4perl};
 
     $sth->_dbix_l4p_debug($h, 2,
-        "bind_param_inout($h->{dbh_no}.$sth->{private_DBIx_st_no})", @args)
+        "bind_param_inout($h->{dbh_no}.$sth->{private_DBIx_st_no})", @_)
         if (($h->{logmask} & DBIX_L4P_LOG_INPUT) && (caller !~ /^DBD::/o));
-    return $sth->SUPER::bind_param_inout(@args);
+    return $sth->SUPER::bind_param_inout(@_);
 }
 
 sub bind_param_array {
@@ -235,13 +237,23 @@ sub fetchrow_array {
 
     my $h = _unseen_sth($sth);
 
-    my @row = $sth->SUPER::fetchrow_array(@args);
-    $sth->_dbix_l4p_debug($h, 2,
-        sub {Data::Dumper->Dump(
-            [\@row],
-            ["fetchrow_array($h->{dbh_no}.$sth->{private_DBIx_st_no})"])})
-        if ($h->{logmask} & DBIX_L4P_LOG_OUTPUT);
-    return @row;
+    if (wantarray) {
+        my @row = $sth->SUPER::fetchrow_array(@args);
+        $sth->_dbix_l4p_debug($h, 2,
+            sub {Data::Dumper->Dump(
+                [\@row],
+                ["fetchrow_array($h->{dbh_no}.$sth->{private_DBIx_st_no})"])})
+            if ($h->{logmask} & DBIX_L4P_LOG_OUTPUT);
+        return @row;
+    } else {
+        my $row = $sth->SUPER::fetchrow_array(@args);
+        $sth->_dbix_l4p_debug($h, 2,
+            sub {Data::Dumper->Dump(
+                [$row],
+                ["fetchrow_array($h->{dbh_no}.$sth->{private_DBIx_st_no})"])})
+            if ($h->{logmask} & DBIX_L4P_LOG_OUTPUT);
+        return $row;
+    }
 }
 
 sub fetchrow_hashref {
@@ -269,11 +281,9 @@ sub _unseen_sth
     my $sth = shift;
 
     if (!exists($sth->{private_DBIx_Log4perl})) {
-        my $dbh = $sth->FETCH('Database');
-        my $p = $dbh->{private_DBIx_Log4perl};
+        my $p = $sth->FETCH('Database')->{private_DBIx_Log4perl};
         $sth->{private_DBIx_Log4perl} = $p;
-        $sth->{private_DBIx_st_no} =
-            $dbh->{private_DBIx_Log4perl}->{new_stmt_no}();
+        $sth->{private_DBIx_st_no} = $p->{new_stmt_no}();
         return $p;
     } else {
         return $sth->{private_DBIx_Log4perl};

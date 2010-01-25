@@ -1,6 +1,32 @@
 Revision history for Perl extension DBIx::Log4perl.
 
-0.16  Thur October 2009
+0.18  Mon January 22 2010
+
+  Minor speedups in bind_param, bind_param_inout and execute methods.
+    Thanks to Devel::NYTProf.
+
+  Minor speedups in _unseen_sth.
+    Thanks to Devel::NYTProf.
+
+  Fix rt 53755 (fetchrow_array ignoring calling context). Thanks to
+  Bill Rios for spotting this and identifying the problem.
+
+  Log attributes passed to the connect call.
+
+  When outputting the result of a selectall_* it didn't show the
+  connection number.
+
+  Add support for clone.
+  NOTE: This changes introduces incompatilities from previous versions as
+        all attribute names have changed to become lower case.
+
+0.17  Wed December 9 2009
+
+  Fixed problem with no logging output when upgrading to Log::Log4perl
+  1.26 and Perl 5.10.0. Was setting the log level before calling
+  get_logger.
+
+0.16  Thur October 1 2009
 
   Fixed rt50134 reported with a fix by David Gasson. The get_info method
   was not returning the value it got from the driver.
