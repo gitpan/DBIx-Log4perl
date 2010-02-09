@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -236,8 +236,8 @@ Log::Log4perl handle.
 
 =head1 DESCRIPTION
 
-<B>NOTE: The names of DBIx::Log4perl attributes have changed in version
-0.18. They are now all lowercased as per the DBI specification.</B>
+B<NOTE: The names of DBIx::Log4perl attributes have changed in version
+0.18. They are now all lowercased as per the DBI specification.>
 
 C<DBIx::Log4perl> is a wrapper over DBI which adds logging of your DBI
 activity via a Log::Log4perl handle. Log::Log4perl has many advantages
