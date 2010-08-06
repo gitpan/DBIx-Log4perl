@@ -1,12 +1,20 @@
 Revision history for Perl extension DBIx::Log4perl.
 
 
+0.22  Mon July 5 2010
+
+  Changed simple.t test to avoid using piped Log::Log4perl::Appender::File
+  and use recreate instead.
+
+  Fixed bug in fetchrow_hashref if DBIX_L4P_LOG_OUTPUT was set. Thanks
+  to Jimmy Grimberg for spotting this.
+
 0.21  Wed March 3 2010
 
   I did not have a good day yesterday - lesson to be learnt, do not
   release new versions to cpan late at night. Fixed bug introduced
   whilst attempting to fix rt 55143 (should only effect people using
-  execute_array and tuple status.
+  execute_array and tuple status).
 
   Minor pod formatting changes/fixes.
 
