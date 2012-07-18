@@ -12,7 +12,7 @@ use DBIx::Log4perl::Constants qw (:masks $LogMask);
 use DBIx::Log4perl::db;
 use DBIx::Log4perl::st;
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 require Exporter;
 our @ISA = qw(Exporter DBI);		# look in DBI for anything we don't do
 
@@ -28,6 +28,7 @@ our @EXPORT_MASKS = qw(DBIX_L4P_LOG_DEFAULT
 		       DBIX_L4P_LOG_ERRORS
 		       DBIX_L4P_LOG_DBDSPECIFIC
 		       DBIX_L4P_LOG_DELAYBINDPARAM
+		       DBIX_L4P_LOG_SQL
 		     );
 our %EXPORT_TAGS= (masks => \@EXPORT_MASKS);
 Exporter::export_ok_tags('masks'); # all tags must be in EXPORT_OK
@@ -322,7 +323,7 @@ delaying the logging of bind_param (see L</DBIX_L4P_LOG_DELAYBINDPARAM>).
 
 Log at Log4perl debug level input SQL to C<do>, C<prepare>, select*
 methods and any value returned from C<last_insert_id>. In addition, if
-the SQL is an insert/update/delete statement the rows afffected will
+the SQL is an insert/update/delete statement the rows affected will
 be logged.
 
 NOTE: Many databases return 0 rows affected for DDL statements like
@@ -443,6 +444,13 @@ support the ParamTypes attribute in DBI and hence mostly these are
 displayed as C<undef> as in the above case which was using
 DBD::Oracle. Most (if not all) DBDs support ParamValues but you might
 want to check that before setting this flag.
+
+=item DBIX_L4P_LOG_SQL
+
+If set this logs the SQL passed to the do, prepare and select*
+methods. This just separates SQL logging from what
+L</DBIX_L4P_LOG_INPUT> does and is generally most useful when combined
+with L<DBIX_L4P_LOG_DELAYBINDPARAM>.
 
 =back
 
